@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Transcript Fetcher</title>
+    <link rel="stylesheet" href="style.css"> <!-- Optional CSS -->
+</head>
+  <style>
+
+
+    body {
+    font-family: sans-serif;
+    margin: 20px;
+    background-color: #f4f4f4;
+    color: #333;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start; /* Align to top */
+    min-height: 100vh;
+}
+
+.container {
+    background-color: #fff;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 600px;
+}
+
+h1 {
+    color: #333;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.input-group {
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.input-group label {
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.input-group input[type="text"] {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+    margin-bottom: 10px;
+}
+
+.input-group button {
+    padding: 10px 15px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+}
+
+.input-group button:hover {
+    background-color: #0056b3;
+}
+.input-group button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+.results-container {
+    margin-top: 20px;
+    padding: 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+}
+
+.results-container h2 {
+    margin-top: 0;
+    color: #555;
+}
+
+.results-container p {
+    margin: 8px 0;
+}
+
+.results-container ul {
+    list-style-type: disc;
+    padding-left: 20px;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #eee;
+    padding: 10px;
+    background-color: #fff;
+}
+
+.results-container li {
+    padding: 5px 0;
+    border-bottom: 1px dashed #eee;
+}
+.results-container li:last-child {
+    border-bottom: none;
+}
+
+
+.error-message {
+    color: red;
+    background-color: #ffe0e0;
+    border: 1px solid red;
+    padding: 10px;
+    border-radius: 4px;
+    margin-top: 15px;
+    text-align: center;
+}
+
+#loading {
+    text-align: center;
+    margin-top: 20px;
+    font-style: italic;
+    color: #555;
+}
+
+  </style>
+<body>
+    <div class="container">
+        <h1>YouTube Video Transcript</h1>
+        <div class="input-group">
+            <label for="videoId">Enter YouTube Video ID:</label>
+            <input type="text" id="videoId" placeholder="e.g., dQw4w9WgXcQ">
+            <button id="fetchButton">Get Transcript</button>
+        </div>
+
+        <div id="results" class="results-container" style="display: none;">
+            <h2>Results:</h2>
+            <p><strong>Video ID:</strong> <span id="resultVideoId"></span></p>
+            <p><strong>Snippet Count:</strong> <span id="snippetCount"></span></p>
+            <p><strong>Last Snippet Text:</strong> <span id="lastSnippet"></span></p>
+            <h3>Transcript:</h3>
+            <ul id="transcriptList"></ul>
+        </div>
+        <div id="error" class="error-message" style="display: none;"></div>
+        <div id="loading" style="display: none;">Loading...</div>
+    </div>
+
+    <script >
+
+      document.addEventListener('DOMContentLoaded', () => {
+    const videoIdInput = document.getElementById('videoId');
+    const fetchButton = document.getElementById('fetchButton');
+    const resultsDiv = document.getElementById('results');
+    const errorDiv = document.getElementById('error');
+    const loadingDiv = document.getElementById('loading');
+
+    const resultVideoIdSpan = document.getElementById('resultVideoId');
+    const snippetCountSpan = document.getElementById('snippetCount');
+    const lastSnippetSpan = document.getElementById('lastSnippet');
+    const transcriptListUl = document.getElementById('transcriptList');
+
+    fetchButton.addEventListener('click', async () => {
+        const videoId = videoIdInput.value.trim();
+        if (!videoId) {
+            showError("Please enter a YouTube Video ID.");
+            return;
+        }
+
+        showLoading(true);
+        hideError();
+        hideResults();
+
+        try {
+            // The API route will be relative to the domain
+            // e.g., if your site is my-app.vercel.app, this calls my-app.vercel.app/api/transcript
+            const response = await fetch(`/api/transcript?video_id=${encodeURIComponent(videoId)}`);
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: `HTTP error! Status: ${response.status}` }));
+                throw new Error(errorData.error || `Failed to fetch transcript. Status: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (data.error) {
+                showError(data.error);
+            } else {
+                displayResults(data);
+            }
+
+        } catch (err) {
+            console.error("Fetch error:", err);
+            showError(err.message || "An unexpected error occurred.");
+        } finally {
+            showLoading(false);
+        }
+    });
+
+    function displayResults(data) {
+        resultVideoIdSpan.textContent = data.video_id;
+        snippetCountSpan.textContent = data.snippet_count;
+        lastSnippetSpan.textContent = data.last_snippet_text;
+
+        transcriptListUl.innerHTML = ''; // Clear previous list
+        if (data.transcript_texts && data.transcript_texts.length > 0) {
+            data.transcript_texts.forEach(text => {
+                const li = document.createElement('li');
+                li.textContent = text;
+                transcriptListUl.appendChild(li);
+            });
+        } else {
+            const li = document.createElement('li');
+            li.textContent = "No transcript text found.";
+            transcriptListUl.appendChild(li);
+        }
+        resultsDiv.style.display = 'block';
+    }
+
+    function showError(message) {
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+        hideResults();
+    }
+
+    function hideError() {
+        errorDiv.style.display = 'none';
+        errorDiv.textContent = '';
+    }
+
+    function showLoading(isLoading) {
+        loadingDiv.style.display = isLoading ? 'block' : 'none';
+        fetchButton.disabled = isLoading;
+    }
+
+    function hideResults() {
+        resultsDiv.style.display = 'none';
+    }
+
+    // Optional: Allow pressing Enter in the input field
+    videoIdInput.addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault(); // Prevent default form submission if it were in a form
+            fetchButton.click();
+        }
+    });
+});
+
+    </script>
+</body>
+</html>
