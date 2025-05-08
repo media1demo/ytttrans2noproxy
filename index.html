@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Transcript Fetcher</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            max-width: 800px;
+            margin: auto;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        input[type="text"] {
+            width: calc(100% - 90px);
+            padding: 10px;
+            margin-right: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #transcriptOutput {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #eee;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            white-space: pre-wrap; /* Preserve whitespace and newlines */
+            word-wrap: break-word; /* Break long words */
+            min-height: 100px;
+        }
+        .status {
+            margin-top: 10px;
+            font-style: italic;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>YouTube Transcript Fetcher</h1>
+        <div>
+            <input type="text" id="videoIdInput" placeholder="Enter YouTube Video ID (e.g., LAYRxnQapxY)">
+            <button onclick="fetchTranscript()">Get Transcript</button>
+        </div>
+        <div id="statusMessage" class="status"></div>
+        <div id="transcriptOutput">
+            Transcript will appear here...
+        </div>
+    </div>
+
+    <script>
+        async function fetchTranscript() {
+            const videoId = document.getElementById('videoIdInput').value.trim();
+            const outputDiv = document.getElementById('transcriptOutput');
+            const statusDiv = document.getElementById('statusMessage');
+
+            outputDiv.textContent = ''; // Clear previous transcript
+            statusDiv.textContent = ''; // Clear previous status
+            statusDiv.classList.remove('error');
+
+            if (!videoId) {
+                outputDiv.textContent = 'Please enter a YouTube Video ID.';
+                return;
+            }
+
+            statusDiv.textContent = 'Fetching transcript...';
+
+            try {
+                // The API endpoint will be /api/get_transcript on Vercel
+                const response = await fetch(`/api/get_transcript?videoId=${encodeURIComponent(videoId)}`);
+                
+                const data = await response.json();
+
+                if (response.ok) {
+                    statusDiv.textContent = `Transcript fetched (Language: ${data.language || 'N/A'}).`;
+                    outputDiv.textContent = data.transcript;
+                } else {
+                    statusDiv.textContent = 'Error fetching transcript.';
+                    statusDiv.classList.add('error');
+                    outputDiv.textContent = data.error || `Server error: ${response.status}`;
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+                statusDiv.textContent = 'Failed to connect to the server.';
+                statusDiv.classList.add('error');
+                outputDiv.textContent = `Client-side error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
