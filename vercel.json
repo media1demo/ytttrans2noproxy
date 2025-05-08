@@ -1,22 +1,18 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "api/get_transcript.py",
-      "use": "@vercel/python"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/transcript",  
-      "dest": "/api/get_transcript.py"
+    "version": 2,
+    "functions": {
+        "api/get_transcript.py": {
+            "runtime": "python3.9"
+        }
     },
-    {
-      "src": "/(.*)",          
-      "dest": "/public/$1"     
-    }
-  ],
-  "rewrites": [
-    { "source": "/", "destination": "/public/index.html" } 
-  ]
+    "routes": [
+        {
+            "src": "/api/get_transcript",
+            "dest": "/api/get_transcript.py"
+        },
+        {
+            "src": "/(.*)",
+            "dest": "/index.html"
+        }
+    ]
 }
