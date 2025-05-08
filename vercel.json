@@ -8,8 +8,15 @@
   ],
   "routes": [
     {
-      "src": "/api/transcript",
+      "src": "/api/transcript",  // Your API route
       "dest": "/api/get_transcript.py"
+    },
+    {
+      "src": "/(.*)",           // Catch-all for static files
+      "dest": "/public/$1"      // Serve from the public directory
     }
+  ],
+  "rewrites": [
+    { "source": "/", "destination": "/public/index.html" } // Serve index.html at the root
   ]
 }
